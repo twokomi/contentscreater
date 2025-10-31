@@ -1,0 +1,17 @@
+{
+  "name": "youtube-content-producer-app",
+  "version": "1.0.0",
+  "description": "YouTube Content Producer App - AI-powered content creation assistant",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["youtube", "content", "ai", "creator"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.20.0"
+  }
+}

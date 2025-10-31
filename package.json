@@ -1,17 +1,25 @@
 {
-  "name": "youtube-content-producer-app",
+  "name": "ycpa-web",
   "version": "1.0.0",
   "description": "YouTube Content Producer App - AI-powered content creation assistant",
-  "main": "index.html",
+  "type": "module",
   "scripts": {
     "dev": "vercel dev",
     "build": "echo 'Static site - no build needed'",
     "deploy": "vercel --prod"
   },
-  "keywords": ["youtube", "content", "ai", "creator"],
-  "author": "",
+  "keywords": [
+    "youtube",
+    "content-creation",
+    "ai-assistant",
+    "script-generator"
+  ],
+  "author": "YCPA Team",
   "license": "MIT",
   "dependencies": {
     "openai": "^4.20.0"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
   }
 }

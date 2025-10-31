@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YCPA - YouTube Content Producer App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+    <div id="app">
+        <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold logo">
+                            <i class="fas fa-video text-red-500"></i>
+                            YCPA
+                        </h1>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button id="dark-mode-toggle" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <nav class="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+            <div class="container mx-auto px-6">
+                <div class="flex gap-8">
+                    <button class="nav-tab active py-4 border-b-2 border-red-500" data-tab="projects">
+                        <i class="fas fa-folder mr-2"></i>프로젝트
+                    </button>
+                    <button class="nav-tab py-4" data-tab="trends">
+                        <i class="fas fa-chart-line mr-2"></i>트렌드 분석
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="container mx-auto px-6 py-8">
+            <div id="projects-view" class="tab-content">
+                <div class="mb-6 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">내 프로젝트</h2>
+                    <button id="new-project-btn" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">
+                        <i class="fas fa-plus mr-2"></i>새 프로젝트
+                    </button>
+                </div>
+                <div id="projects-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+            </div>
+
+            <div id="trends-view" class="tab-content hidden">
+                <h2 class="text-2xl font-bold mb-6">트렌드 분석</h2>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-search mr-2"></i>키워드 검색
+                    </h3>
+                    <div class="flex gap-4">
+                        <input type="text" id="trend-keyword" placeholder="검색 키워드 입력" 
+                               class="flex-1 px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+                        <button id="trend-search-btn" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+                            <i class="fas fa-search mr-2"></i>분석하기
+                        </button>
+                    </div>
+                </div>
+
+                <div id="trend-results"></div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mt-6">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-fire text-orange-500 mr-2"></i>실시간 인기 키워드
+                    </h3>
+                    <button id="trending-refresh-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mb-4">
+                        <i class="fas fa-sync-alt mr-2"></i>새로고침
+                    </button>
+                    <div id="trending-keywords"></div>
+                </div>
+            </div>
+        </main>
+
+        <div id="project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4">
+                <h2 class="text-2xl font-bold mb-6">새 프로젝트</h2>
+                <form id="project-form" class="space-y-4">
+                    <div>
+                        <label class="block mb-2 font-medium">주제</label>
+                        <input type="text" name="topic" required 
+                               class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-medium">타겟 오디언스</label>
+                        <input type="text" name="audience" required 
+                               class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-2 font-medium">톤</label>
+                            <select name="tone" required 
+                                    class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+                                <option value="casual">캐주얼</option>
+                                <option value="professional">전문적</option>
+                                <option value="energetic">활기찬</option>
+                                <option value="educational">교육적</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-medium">길이</label>
+                            <select name="length" required 
+                                    class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+                                <option value="short">짧음 (1-3분)</option>
+                                <option value="medium">중간 (3-8분)</option>
+                                <option value="long">김 (8-15분)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 mt-6">
+                        <button type="submit" class="flex-1 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600">
+                            생성하기
+                        </button>
+                        <button type="button" onclick="document.getElementById('project-modal').classList.add('hidden')"
+                                class="flex-1 bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600">
+                            취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/templates.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/trends.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active', 'border-red-500'));
+                tab.classList.add('active', 'border-red-500');
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+                document.getElementById(targetTab + '-view').classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('trending-refresh-btn')?.addEventListener('click', async () => {
+            try {
+                const data = await APIClient.getTrendingKeywords();
+                showToast('인기 키워드 로드 완료!', 'success');
+            } catch (error) {
+                showToast('로드 실패', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

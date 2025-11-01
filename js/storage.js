@@ -1,57 +1,63 @@
 /**
  * YCPA Storage Module
- * Handles data persistence using Table API
+ * Handles data persistence using localStorage (Browser-based)
  */
 
 const StorageAPI = {
-    baseURL: 'tables/',
+    // localStorage keys
+    KEYS: {
+        PROJECTS: 'ycpa_projects',
+        SCRIPTS: 'ycpa_scripts',
+        ANGLES: 'ycpa_angles',
+        CTAS: 'ycpa_ctas',
+        SEO: 'ycpa_seo',
+        PRODUCTS: 'ycpa_products',
+        SHORTS: 'ycpa_shorts',
+        ASSET_HINTS: 'ycpa_asset_hints',
+        TREND_QUERIES: 'ycpa_trend_queries'
+    },
     
-    // Generic fetch wrapper
-    async request(endpoint, options = {}) {
+    // Get data from localStorage
+    _get(key) {
         try {
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            // Handle 204 No Content
-            if (response.status === 204) {
-                return { ok: true };
-            }
-            
-            const data = await response.json();
-            return { ok: true, data };
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
         } catch (error) {
-            console.error('API Error:', error);
-            return { ok: false, error: error.message };
+            console.error(`Error reading ${key}:`, error);
+            return [];
+        }
+    },
+    
+    // Save data to localStorage
+    _set(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+            return true;
+        } catch (error) {
+            console.error(`Error saving ${key}:`, error);
+            return false;
         }
     },
     
     // Projects CRUD
     async getProjects(filters = {}) {
-        let query = 'projects?limit=100';
-        if (filters.status) query += `&search=${filters.status}`;
+        const projects = this._get(this.KEYS.PROJECTS);
         
-        const result = await this.request(query);
-        if (result.ok && result.data) {
-            return result.data.data || [];
+        if (filters.status) {
+            return projects.filter(p => p.status === filters.status);
         }
-        return [];
+        
+        return projects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     },
     
     async getProject(id) {
-        const result = await this.request(`projects/${id}`);
-        return result.ok ? result.data : null;
+        const projects = this._get(this.KEYS.PROJECTS);
+        return projects.find(p => p.id === id) || null;
     },
     
     async createProject(data) {
+        const projects = this._get(this.KEYS.PROJECTS);
+        
         const project = {
             id: generateUUID(),
             topic: data.topic,
@@ -63,46 +69,80 @@ const StorageAPI = {
             updatedAt: new Date().toISOString()
         };
         
-        const result = await this.request('projects', {
-            method: 'POST',
-            body: JSON.stringify(project)
-        });
+        projects.push(project);
+        this._set(this.KEYS.PROJECTS, projects);
         
-        return result.ok ? project : null;
+        return project;
     },
     
     async updateProject(id, updates) {
-        const updated = {
+        const projects = this._get(this.KEYS.PROJECTS);
+        const index = projects.findIndex(p => p.id === id);
+        
+        if (index === -1) return false;
+        
+        projects[index] = {
+            ...projects[index],
             ...updates,
             updatedAt: new Date().toISOString()
         };
         
-        const result = await this.request(`projects/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updated)
-        });
-        
-        return result.ok;
+        this._set(this.KEYS.PROJECTS, projects);
+        return true;
     },
     
     async deleteProject(id) {
-        const result = await this.request(`projects/${id}`, {
-            method: 'DELETE'
-        });
+        const projects = this._get(this.KEYS.PROJECTS);
+        const filtered = projects.filter(p => p.id !== id);
         
-        return result.ok;
+        this._set(this.KEYS.PROJECTS, filtered);
+        
+        // Also delete related data
+        this._deleteRelatedData(id);
+        
+        return true;
+    },
+    
+    // Delete all related data for a project
+    _deleteRelatedData(projectId) {
+        // Scripts
+        const scripts = this._get(this.KEYS.SCRIPTS);
+        this._set(this.KEYS.SCRIPTS, scripts.filter(s => s.projectId !== projectId));
+        
+        // Angles
+        const angles = this._get(this.KEYS.ANGLES);
+        this._set(this.KEYS.ANGLES, angles.filter(a => a.projectId !== projectId));
+        
+        // CTAs
+        const ctas = this._get(this.KEYS.CTAS);
+        this._set(this.KEYS.CTAS, ctas.filter(c => c.projectId !== projectId));
+        
+        // SEO
+        const seo = this._get(this.KEYS.SEO);
+        this._set(this.KEYS.SEO, seo.filter(s => s.projectId !== projectId));
+        
+        // Products
+        const products = this._get(this.KEYS.PRODUCTS);
+        this._set(this.KEYS.PRODUCTS, products.filter(p => p.projectId !== projectId));
+        
+        // Shorts
+        const shorts = this._get(this.KEYS.SHORTS);
+        this._set(this.KEYS.SHORTS, shorts.filter(s => s.projectId !== projectId));
+        
+        // Asset Hints
+        const hints = this._get(this.KEYS.ASSET_HINTS);
+        this._set(this.KEYS.ASSET_HINTS, hints.filter(h => h.projectId !== projectId));
     },
     
     // Scripts
     async getScriptByProject(projectId) {
-        const result = await this.request(`scripts?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.find(s => s.projectId === projectId);
-        }
-        return null;
+        const scripts = this._get(this.KEYS.SCRIPTS);
+        return scripts.find(s => s.projectId === projectId) || null;
     },
     
     async createScript(data) {
+        const scripts = this._get(this.KEYS.SCRIPTS);
+        
         const script = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -115,33 +155,36 @@ const StorageAPI = {
             createdAt: new Date().toISOString()
         };
         
-        const result = await this.request('scripts', {
-            method: 'POST',
-            body: JSON.stringify(script)
-        });
+        scripts.push(script);
+        this._set(this.KEYS.SCRIPTS, scripts);
         
-        return result.ok ? script : null;
+        return script;
     },
     
     async updateScript(id, updates) {
-        const result = await this.request(`scripts/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updates)
-        });
+        const scripts = this._get(this.KEYS.SCRIPTS);
+        const index = scripts.findIndex(s => s.id === id);
         
-        return result.ok;
+        if (index === -1) return false;
+        
+        scripts[index] = {
+            ...scripts[index],
+            ...updates
+        };
+        
+        this._set(this.KEYS.SCRIPTS, scripts);
+        return true;
     },
     
     // Angles
     async getAnglesByProject(projectId) {
-        const result = await this.request(`angles?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.filter(a => a.projectId === projectId);
-        }
-        return [];
+        const angles = this._get(this.KEYS.ANGLES);
+        return angles.filter(a => a.projectId === projectId);
     },
     
     async createAngle(data) {
+        const angles = this._get(this.KEYS.ANGLES);
+        
         const angle = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -151,24 +194,21 @@ const StorageAPI = {
             thumbnailCopy: data.thumbnailCopy
         };
         
-        const result = await this.request('angles', {
-            method: 'POST',
-            body: JSON.stringify(angle)
-        });
+        angles.push(angle);
+        this._set(this.KEYS.ANGLES, angles);
         
-        return result.ok ? angle : null;
+        return angle;
     },
     
     // CTAs
     async getCTAsByProject(projectId) {
-        const result = await this.request(`ctas?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.filter(c => c.projectId === projectId);
-        }
-        return [];
+        const ctas = this._get(this.KEYS.CTAS);
+        return ctas.filter(c => c.projectId === projectId);
     },
     
     async createCTA(data) {
+        const ctas = this._get(this.KEYS.CTAS);
+        
         const cta = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -178,24 +218,21 @@ const StorageAPI = {
             destination: data.destination || ''
         };
         
-        const result = await this.request('ctas', {
-            method: 'POST',
-            body: JSON.stringify(cta)
-        });
+        ctas.push(cta);
+        this._set(this.KEYS.CTAS, ctas);
         
-        return result.ok ? cta : null;
+        return cta;
     },
     
     // SEO
     async getSEOByProject(projectId) {
-        const result = await this.request(`seo?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.find(s => s.projectId === projectId);
-        }
-        return null;
+        const seo = this._get(this.KEYS.SEO);
+        return seo.find(s => s.projectId === projectId) || null;
     },
     
     async createSEO(data) {
+        const seoList = this._get(this.KEYS.SEO);
+        
         const seo = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -206,24 +243,21 @@ const StorageAPI = {
             chaptersJson: JSON.stringify(data.chapters || [])
         };
         
-        const result = await this.request('seo', {
-            method: 'POST',
-            body: JSON.stringify(seo)
-        });
+        seoList.push(seo);
+        this._set(this.KEYS.SEO, seoList);
         
-        return result.ok ? seo : null;
+        return seo;
     },
     
     // Products
     async getProductsByProject(projectId) {
-        const result = await this.request(`products?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.filter(p => p.projectId === projectId);
-        }
-        return [];
+        const products = this._get(this.KEYS.PRODUCTS);
+        return products.filter(p => p.projectId === projectId);
     },
     
     async createProduct(data) {
+        const products = this._get(this.KEYS.PRODUCTS);
+        
         const product = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -234,33 +268,36 @@ const StorageAPI = {
             utm: `utm_source=ycpa&utm_medium=short&utm_campaign=${data.projectId}`
         };
         
-        const result = await this.request('products', {
-            method: 'POST',
-            body: JSON.stringify(product)
-        });
+        products.push(product);
+        this._set(this.KEYS.PRODUCTS, products);
         
-        return result.ok ? product : null;
+        return product;
     },
     
     async updateProduct(id, updates) {
-        const result = await this.request(`products/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updates)
-        });
+        const products = this._get(this.KEYS.PRODUCTS);
+        const index = products.findIndex(p => p.id === id);
         
-        return result.ok;
+        if (index === -1) return false;
+        
+        products[index] = {
+            ...products[index],
+            ...updates
+        };
+        
+        this._set(this.KEYS.PRODUCTS, products);
+        return true;
     },
     
     // Shorts
     async getShortsByProject(projectId) {
-        const result = await this.request(`shorts?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.filter(s => s.projectId === projectId);
-        }
-        return [];
+        const shorts = this._get(this.KEYS.SHORTS);
+        return shorts.filter(s => s.projectId === projectId);
     },
     
     async createShort(data) {
+        const shorts = this._get(this.KEYS.SHORTS);
+        
         const short = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -270,24 +307,21 @@ const StorageAPI = {
             overlayTextsJson: JSON.stringify(data.overlayTexts || [])
         };
         
-        const result = await this.request('shorts', {
-            method: 'POST',
-            body: JSON.stringify(short)
-        });
+        shorts.push(short);
+        this._set(this.KEYS.SHORTS, shorts);
         
-        return result.ok ? short : null;
+        return short;
     },
     
     // Asset Hints
     async getAssetHintsByProject(projectId) {
-        const result = await this.request(`assetHints?search=${projectId}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.find(a => a.projectId === projectId);
-        }
-        return null;
+        const hints = this._get(this.KEYS.ASSET_HINTS);
+        return hints.find(h => h.projectId === projectId) || null;
     },
     
     async createAssetHints(data) {
+        const hintsList = this._get(this.KEYS.ASSET_HINTS);
+        
         const hints = {
             id: generateUUID(),
             projectId: data.projectId,
@@ -295,16 +329,16 @@ const StorageAPI = {
             subtitleCuesJson: JSON.stringify(data.subtitleCues || [])
         };
         
-        const result = await this.request('assetHints', {
-            method: 'POST',
-            body: JSON.stringify(hints)
-        });
+        hintsList.push(hints);
+        this._set(this.KEYS.ASSET_HINTS, hintsList);
         
-        return result.ok ? hints : null;
+        return hints;
     },
     
     // Trend Queries
     async createTrendQuery(data) {
+        const queries = this._get(this.KEYS.TREND_QUERIES);
+        
         const query = {
             id: generateUUID(),
             keyword: data.keyword,
@@ -314,23 +348,18 @@ const StorageAPI = {
             createdAt: new Date().toISOString()
         };
         
-        const result = await this.request('trendQueries', {
-            method: 'POST',
-            body: JSON.stringify(query)
-        });
+        queries.push(query);
+        this._set(this.KEYS.TREND_QUERIES, queries);
         
-        return result.ok ? query : null;
+        return query;
     },
     
     async getTrendQuery(keyword, locale, range) {
-        const result = await this.request(`trendQueries?search=${keyword}`);
-        if (result.ok && result.data && result.data.data) {
-            return result.data.data.find(q => 
-                q.keyword === keyword && 
-                q.locale === locale && 
-                q.range === range
-            );
-        }
-        return null;
+        const queries = this._get(this.KEYS.TREND_QUERIES);
+        return queries.find(q => 
+            q.keyword === keyword && 
+            q.locale === locale && 
+            q.range === range
+        ) || null;
     }
 };

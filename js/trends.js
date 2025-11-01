@@ -1,5 +1,5 @@
 // Trends module
-const Trends = {
+const TrendsModule = {
     currentTrendData: null,
 
     async init() {
